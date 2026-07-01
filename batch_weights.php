@@ -60,8 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!empty($_POST['module_ids']) || !e
 
   <?php if ($results): ?>
     <ul class="results">
-      <?php foreach ($results as [$label, $status]):
-            $cls = str_starts_with($status, 'done') ? 'ok' : (str_starts_with($status, 'skipped') ? 'skip' : 'err'); ?>
+      <?php foreach ($results as list($label, $status)):
+            $cls = strpos($status, 'done') === 0 ? 'ok' : (strpos($status, 'skipped') === 0 ? 'skip' : 'err'); ?>
         <li><strong><?= htmlspecialchars($label) ?></strong>: <span class="<?= $cls ?>"><?= htmlspecialchars($status) ?></span></li>
       <?php endforeach; ?>
     </ul>

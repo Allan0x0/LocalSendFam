@@ -5,6 +5,9 @@ require_once __DIR__ . '/weights_lib.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// JSON_INVALID_UTF8_SUBSTITUTE is PHP 7.2+; fall back to 0 on PHP 5.5.
+$JSON_FLAGS = defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0;
+
 // AJAX batch endpoint: process one batch of module ids, return JSON.
 // No session_start() here on purpose — PHP serializes requests that share a
 // session on the session-file lock, which would turn our parallel batches back
@@ -22,18 +25,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $body = json_decode(file_get_contents('php://input'), true);
-        $ids = array_map('intval', $body['module_ids'] ?? []);
+        $rawIds = isset($body['module_ids']) ? $body['module_ids'] : [];
+        $ids = array_map('intval', $rawIds);
         $modules = loadModules($conn);
 
         $out = [];
         foreach ($ids as $mid) {
-            [$label, $status] = processModule($conn, $mid, $modules);
+            list($label, $status) = processModule($conn, $mid, $modules);
             $out[] = ['label' => $label, 'status' => $status];
         }
         // Tables are latin1; a stray non-UTF-8 byte in a name would make
         // json_encode return false and blank the body. Substitute, don't fail.
-        echo json_encode($out, JSON_INVALID_UTF8_SUBSTITUTE);
-    } catch (Throwable $e) {
+        echo json_encode($out, $JSON_FLAGS);
+    } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['error' => $e->getMessage()]);
     }
@@ -97,7 +101,7 @@ foreach ($modules as $id => $label) {
 </div>
 
 <script>
-  const MODULES = <?= json_encode($moduleList, JSON_INVALID_UTF8_SUBSTITUTE) ?>;
+  const MODULES = <?= json_encode($moduleList, $JSON_FLAGS) ?>;
 
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
