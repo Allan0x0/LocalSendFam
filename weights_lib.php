@@ -76,10 +76,11 @@ function processModule($conn, $mid, $modules, $retries = 5) {
         return [$label, 'skipped -- no registered students'];
     }
 
+    // Note: no "SET ... READ COMMITTED" here. On a server with binary logging
+    // in STATEMENT format, InnoDB refuses to write under READ COMMITTED
+    // ("impossible to write to binary log"). The set-based upsert below is the
+    // real deadlock fix; it works fine under the default REPEATABLE READ.
     for ($attempt = 1; ; $attempt++) {
-        // READ COMMITTED drops the gap/next-key locks REPEATABLE READ would add
-        // to the INSERT...SELECT, cutting deadlock surface further.
-        $conn->query("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED");
         $conn->begin_transaction();
         $msg = '';
         $err = applyWeight($conn, 'registeredmodule_courseworkmark', $mid, $cw, $msg);
