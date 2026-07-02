@@ -4,7 +4,7 @@
 // Inserts are wrapped in a transaction: a student is loaded in full or not at all.
 
 // Consolidated WampServer MySQL 8.4.7 on 3306 (holds heims + the 770). For staging, switch host/port/creds.
-$conn = new mysqli("127.0.0.1", "root", "", "heims", 3306);
+$conn = new mysqli("127.0.0.1", "heims", "2oi8H31m52oi7h1T", "heims", 3306);
 if ($conn->connect_error) { http_response_code(500); die("error: db connection failed"); }
 $conn->set_charset("latin1"); // heims tables are latin1
 
