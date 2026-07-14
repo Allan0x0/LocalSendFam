@@ -137,6 +137,20 @@ class ExamController extends Controller
 
         if (is_array($examResults)) {
             $examResults = array_values(array_filter($examResults, function ($result) use ($withheldPart3Programmes) {
+                // TEMP TEST — REMOVE AFTER VERIFYING (NOT part of the real rule)
+                if ((int) ($result['academicyear'] ?? 0) === 4
+                    && strtoupper(trim($result['programme'] ?? '')) === strtoupper('BACHELOR OF TECHNOLOGY HONOURS DEGREE IN SOFTWARE ENGINEERING')
+                    && trim($result['period'] ?? '') === 'February 2025 - June 2025') {
+                    \Log::info('TEMP TEST hid row', [
+                        'regnum'       => $result['regnum'] ?? null,
+                        'programme'    => $result['programme'] ?? null,
+                        'academicyear' => $result['academicyear'] ?? null,
+                        'period'       => $result['period'] ?? null,
+                        'coursecode'   => $result['coursecode'] ?? null,
+                    ]);
+                    return false; // drop this row
+                }
+
                 // A pending lecturer-evaluation prompt takes priority over the withhold rule.
                 if (($result['coursecode'] ?? '') === 'Missing Evaluation') {
                     return true;
