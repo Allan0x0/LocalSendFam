@@ -124,40 +124,42 @@ class ExamController extends Controller
 
         $examResults = $response->json();
 
-        // Withhold Part 3 results for these engineering programmes (registry request).
-        // academicyear === 3 marks a Part 3 result; drop those rows so no period shows them.
-        $withheldPart3Programmes = [
-            'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN BIOMEDICAL ENGINEERING',
-            'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN CHEMICAL AND PROCESS SYSTEMS ENGINEERING',
-            'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN ELECTRONIC ENGINEERING',
-            'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN INDUSTRIAL AND MANUFACTURING ENGINEERING',
-            'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN MATERIALS TECHNOLOGY AND ENGINEERING',
-            'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN POLYMER TECHNOLOGY AND ENGINEERING',
+        // Withhold results for these engineering programmes (registry request).
+        // Each programme maps to the academic year whose results are withheld
+        // (Biomedical Engineering withholds year 4; the rest withhold year 3).
+        $withheldProgrammeYear = [
+            'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN BIOMEDICAL ENGINEERING'                 => 4,
+            'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN CHEMICAL AND PROCESS SYSTEMS ENGINEERING' => 3,
+            'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN ELECTRONIC ENGINEERING'                 => 3,
+            'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN INDUSTRIAL AND MANUFACTURING ENGINEERING' => 3,
+            'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN MATERIALS TECHNOLOGY AND ENGINEERING'   => 3,
+            'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN POLYMER TECHNOLOGY AND ENGINEERING'     => 3,
         ];
 
         if (is_array($examResults)) {
-            $examResults = array_values(array_filter($examResults, function ($result) use ($withheldPart3Programmes) {
+            $examResults = array_values(array_filter($examResults, function ($result) use ($withheldProgrammeYear) {
                 // TEMP TEST — REMOVE AFTER VERIFYING (NOT part of the real rule)
-                if ((int) ($result['academicyear'] ?? 0) === 4
-                    && strtoupper(trim($result['programme'] ?? '')) === strtoupper('BACHELOR OF TECHNOLOGY HONOURS DEGREE IN SOFTWARE ENGINEERING')
-                    && trim($result['period'] ?? '') === 'February 2025 - June 2025') {
-                    \Log::info('TEMP TEST hid row', [
-                        'regnum'       => $result['regnum'] ?? null,
-                        'programme'    => $result['programme'] ?? null,
-                        'academicyear' => $result['academicyear'] ?? null,
-                        'period'       => $result['period'] ?? null,
-                        'coursecode'   => $result['coursecode'] ?? null,
-                    ]);
-                    return false; // drop this row
-                }
+                // if ((int) ($result['academicyear'] ?? 0) === 4
+                //     && strtoupper(trim($result['programme'] ?? '')) === strtoupper('BACHELOR OF TECHNOLOGY HONOURS DEGREE IN SOFTWARE ENGINEERING')
+                //     && trim($result['period'] ?? '') === 'February 2025 - June 2025') {
+                //     \Log::info('TEMP TEST hid row', [
+                //         'regnum'       => $result['regnum'] ?? null,
+                //         'programme'    => $result['programme'] ?? null,
+                //         'academicyear' => $result['academicyear'] ?? null,
+                //         'period'       => $result['period'] ?? null,
+                //         'coursecode'   => $result['coursecode'] ?? null,
+                //     ]);
+                //     return false; // drop this row
+                // }
 
                 // A pending lecturer-evaluation prompt takes priority over the withhold rule.
                 if (($result['coursecode'] ?? '') === 'Missing Evaluation') {
                     return true;
                 }
-                $isPart3    = (int) ($result['academicyear'] ?? 0) === 3;
-                $isWithheld = in_array(strtoupper(trim($result['programme'] ?? '')), $withheldPart3Programmes, true);
-                return !($isPart3 && $isWithheld); // keep everything except Part 3 in these programmes
+                // Withhold when the row's academic year matches the withheld year for its programme.
+                $withheldYear = $withheldProgrammeYear[strtoupper(trim($result['programme'] ?? ''))] ?? null;
+                $isWithheld   = $withheldYear !== null && (int) ($result['academicyear'] ?? 0) === $withheldYear;
+                return !$isWithheld; // keep everything except the withheld year for these programmes
             }));
         }
 
