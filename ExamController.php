@@ -124,9 +124,10 @@ class ExamController extends Controller
 
         $examResults = $response->json();
 
-        // Withhold results for these engineering programmes (registry request).
+        // Withhold results for these engineering programmes for one sitting only (registry request).
         // Each programme maps to the academic year whose results are withheld
-        // (Biomedical Engineering withholds year 4; the rest withhold year 3).
+        // (Biomedical Engineering withholds year 4; the rest withhold year 3),
+        // and only for the target period below — so past years' results stay visible.
         $withheldProgrammeYear = [
             'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN BIOMEDICAL ENGINEERING'                 => 4,
             'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN CHEMICAL AND PROCESS SYSTEMS ENGINEERING' => 3,
@@ -135,9 +136,10 @@ class ExamController extends Controller
             'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN MATERIALS TECHNOLOGY AND ENGINEERING'   => 3,
             'BACHELOR OF TECHNOLOGY HONOURS DEGREE IN POLYMER TECHNOLOGY AND ENGINEERING'     => 3,
         ];
+        $withheldPeriod = 'February 2026 - June 2026';
 
         if (is_array($examResults)) {
-            $examResults = array_values(array_filter($examResults, function ($result) use ($withheldProgrammeYear) {
+            $examResults = array_values(array_filter($examResults, function ($result) use ($withheldProgrammeYear, $withheldPeriod) {
                 // TEMP TEST — REMOVE AFTER VERIFYING (NOT part of the real rule)
                 // if ((int) ($result['academicyear'] ?? 0) === 4
                 //     && strtoupper(trim($result['programme'] ?? '')) === strtoupper('BACHELOR OF TECHNOLOGY HONOURS DEGREE IN SOFTWARE ENGINEERING')
@@ -156,10 +158,13 @@ class ExamController extends Controller
                 if (($result['coursecode'] ?? '') === 'Missing Evaluation') {
                     return true;
                 }
-                // Withhold when the row's academic year matches the withheld year for its programme.
+                // Withhold only the target period's results, and only when the row's academic
+                // year matches the withheld year for its programme.
                 $withheldYear = $withheldProgrammeYear[strtoupper(trim($result['programme'] ?? ''))] ?? null;
-                $isWithheld   = $withheldYear !== null && (int) ($result['academicyear'] ?? 0) === $withheldYear;
-                return !$isWithheld; // keep everything except the withheld year for these programmes
+                $isWithheld   = $withheldYear !== null
+                    && (int) ($result['academicyear'] ?? 0) === $withheldYear
+                    && trim($result['period'] ?? '') === $withheldPeriod;
+                return !$isWithheld; // keep everything except the withheld year in the target period
             }));
         }
 
