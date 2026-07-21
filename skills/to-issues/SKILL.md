@@ -80,4 +80,24 @@ Or "None - can start immediately" if no blockers.
 
 </issue-template>
 
+<acceptance-criteria-rules>
+Acceptance criteria are the contract read by four things that never talk to each
+other: the maker writing tests, `anyleft` grading done-vs-remaining, the wave
+driver deciding whether integration is complete, and the human at the manual
+gate. A vague criterion gets a different guess from each, and the disagreement
+surfaces at the most expensive checkpoint.
+
+- **Name something observable.** Every criterion must reference a route, a
+  command, a status code, a rendered string, or a stored value. A criterion that
+  names none of these is a wish, not a criterion — rewrite it or ask the user.
+- **Say how a new screen is reached.** Any criterion that adds a screen, route,
+  or view must also state the path a user takes to get there. Orphaned routes
+  pass every per-issue check and still dead-end the flow.
+- **Cover the unhappy path.** Name what wrong input, expired state, or a failed
+  call should produce. A maker given only the happy path will build only the
+  happy path.
+- **The test:** could a maker write the test for this without asking a question?
+  If reading it raises a question, that question gets answered by a guess.
+</acceptance-criteria-rules>
+
 Do NOT close or modify any parent issue.

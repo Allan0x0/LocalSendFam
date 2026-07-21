@@ -22,7 +22,10 @@ Run `/anyleft` or `/anyleft #42` to check if a GitHub issue is fully resolved.
    - Check for linked sub-issues or PRs that must be merged first
 
 3. **Inspect the code**
-   - `git diff main...HEAD` — scope of changes on this branch
+   - `git diff <base>...HEAD` — scope of changes on this branch, where `<base>`
+     is `staging` if it exists, else `main`. Never hardcode `main`: worktrees in
+     the loop are cut from `staging`, and diffing the wrong base grades the
+     wrong change.
    - `git status` — any uncommitted work
    - Scan the diff for introduced TODO/FIXME/HACK comments
 

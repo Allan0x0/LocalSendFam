@@ -37,7 +37,9 @@ Group issues into **waves**:
 - **Wave 2**: blocked only by Wave 1 issues — start after Wave 1 merges
 - **Wave N**: each subsequent wave unblocks once all its blockers are closed
 
-Flag issues with **shared-file risk** (parallel but touching the same code area) — they can still run in parallel but will likely need careful merge coordination.
+Issues that touch the same file or surface go in **separate waves**, even when neither blocks the other. A merge conflict you avoid costs nothing; one you resolve costs a round trip through integration. Dependency order sets the floor for which wave an issue *can* be in; file isolation picks which of the eligible waves it lands in.
+
+Still list them under **Shared-file risks** in the output, naming the wave each was pushed to and why — the driver checks that section before spawning.
 
 ## 4. Output the workplan
 

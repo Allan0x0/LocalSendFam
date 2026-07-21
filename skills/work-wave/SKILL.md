@@ -1,6 +1,6 @@
 ---
 name: work-wave
-description: Drive a whole dependency wave of GitHub issues to merged-into-staging in one session — spawn a work-issue maker subagent per issue in its own worktree (parallel), verify each committed, merge them into staging in dependency order resolving conflicts, run the check gate, then pause for your manual verification before closing issues and cleaning up worktrees. Use when the user says "/work-wave", "run this wave", "work these issues in parallel", or hands you a wave from /issue-workplan.
+description: Drive a whole dependency wave of GitHub issues to merged-into-staging in one session — spawn a work-issue maker subagent per issue in its own worktree (parallel), verify each committed, merge them into staging in dependency order resolving conflicts, run the check gate, close logic issues that pass an independent anyleft, then pause for your manual verification of visual and docs issues before closing them and cleaning up worktrees. Use when the user says "/work-wave", "run this wave", "work these issues in parallel", or hands you a wave from /issue-workplan.
 ---
 
 # work-wave — the parallel wave driver
@@ -37,6 +37,13 @@ worktree is cut from the right commit instead of a stale `main`:
 `git checkout staging && git pull --ff-only origin staging`. If the pull fails,
 stop and surface it — spawning a wave from a stale or diverged base wastes
 every maker.
+
+**Then check file isolation.** Confirm no two issues in this wave touch the same
+file or surface (read the workplan's **Shared-file risks** section, or diff the
+issue bodies for overlapping routes, components, and schema tables). If two do,
+drop the later one to the next wave rather than spawning both. A conflict you
+avoid costs nothing; one you resolve in Phase 3 costs a round trip. Widen waves
+with genuinely independent issues, not with issues that share a surface.
 
 Spawn one background agent per issue, each with `isolation: worktree` so they
 can't collide mid-flight, each running the maker skill:
@@ -75,6 +82,21 @@ For each issue, classify:
 Do not proceed to Phase 3 until every issue is committed + clean, or the user
 has explicitly dropped one from the wave.
 
+**Gate 2 — independent criteria check on every `logic` issue.** Those close in
+Phase 5 without a human pass, so this is their last criteria-level check. Run the
+`anyleft` skill against each `logic` issue **in its worktree, with fresh
+context** — the maker's own step-6 run does not count, same context means same
+blind spots. Read the issue body and confirm each acceptance criterion is
+actually met by the diff.
+
+Gate 2 checks criteria, not gates: **skip `anyleft`'s typecheck/lint/test step
+here.** Phase 3 runs the full suite once on integrated staging, which is the
+stronger signal and the only one worth spending wall clock on.
+
+`ANYLEFT: FAIL` means the issue does not auto-close: send it back to its maker,
+or move it into the Phase 4 runbook for manual verification. Skip Gate 2 entirely
+for `visual` and `docs` issues; a human looks at those anyway.
+
 ## Phase 3 — integrate into staging (the new step)
 
 On the main checkout, on `staging`, working tree clean. Merge the worktree
@@ -102,10 +124,24 @@ git merge --no-ff worktree-agent-<id> -m "Merge #N: <title> into staging"
   every per-issue check and still dead-end the flow. Fix them here with a small
   bridge commit; they're the cost of parallel work.
 
-## Phase 4 — hand off for manual verification (human gate, do NOT skip)
+## Phase 4 — hand off for manual verification (human gate)
 
-Integration being green is not "done" — the human still verifies on staging, the
-same checkpoint the serial flow had. Produce **one consolidated runbook**, not N:
+**First, split the wave by route.** The human gate is the wave's bottleneck, so
+only put in front of it what actually needs human eyes:
+
+- **`logic`** issues that are green after Phase 3 and passed Gate 2 need no
+  manual pass. Their acceptance criteria are already encoded as tests by the TDD
+  path, and those tests have now passed on integrated staging under a check the
+  maker did not run. Close them out (Phase 5) immediately, without waiting.
+- **`visual`** and **`docs`** issues go in the runbook. Visual judgment and prose
+  quality are the human's; no automated gate substitutes for them.
+
+This trades on your tests genuinely encoding the criteria. If a `logic` issue's
+criteria are too vague to test (no route, no command, no status code, no
+rendered string), it does not qualify — put it in the runbook instead and fix
+the criteria upstream in `/to-issues`.
+
+Then produce **one consolidated runbook** for the `visual`/`docs` subset, not N:
 
 - How to boot the app locally (DB, migrations, dev server, any console-printed
   login/OTP — read the code, don't guess).
@@ -125,7 +161,9 @@ it back to the relevant maker (`SendMessage`) or fix inline, then re-verify.
 
 ## Phase 5 — close out (loop the single-issue skills)
 
-Only after the user confirms verification. For each issue in the wave:
+For `logic` issues: as soon as Phase 3 is green and Gate 2 passed — do not wait
+on the human. For `visual` and `docs` issues: only after the user confirms the
+manual pass. For each issue, in that order:
 
 1. `/update-and-close-issue <N>` — post the closing summary + commit links, close it.
 2. `/clean-up-session` for that worktree — it runs `anyleft` first, then removes
@@ -138,8 +176,10 @@ newly-merged wave unblocks next.
 
 ## Guardrails
 
-- **Never close an issue before the human verification gate.** Green tests are
-  the maker's bar; the human pass is yours.
+- **Never close a `visual` or `docs` issue before the human verification gate.**
+  Appearance and prose are the human's call. `logic` issues may close on green
+  Phase 3 + Gate 2, but only those, and only when Gate 2 actually ran with fresh
+  context — a maker's self-check is not Gate 2.
 - **Never merge across waves.** A dependent whose blocker isn't merged yet is not
   in this wave.
 - **Trust-but-verify every maker** (Phase 2). This exists because it has already

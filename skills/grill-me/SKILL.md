@@ -10,3 +10,5 @@ Ask the questions one at a time. When two or three questions are genuinely indep
 Use plain language throughout. Define every term of art the first time you use it, in the same sentence ("a DSL, meaning a small language built for one specific job"). Never lean on jargon or a coined phrase the reader hasn't been given the plain meaning of. Options must say what each choice does, not what it's called.
 
 If a question can be answered by exploring the codebase, explore the codebase instead.
+
+Push every decision down to something observable — a route, a command, a status code, a rendered string, a stored value. When an answer leaves a question that a later implementer would have to guess at ("what happens on a wrong code?", "how does the user reach that screen?", "how fast is fast enough?"), ask it now. This session is the cheapest place in the pipeline to answer it; every later stage answers it by guessing.

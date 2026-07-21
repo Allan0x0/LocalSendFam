@@ -79,10 +79,11 @@ disposable; the repo and the issue carry all durable state.
    output `WORK_ISSUE_BLOCKED: <reason>`.
 
 4. **Verify your own work** before committing:
-   - For `logic` / `visual` paths: run the repo's typecheck and test commands
-     (see `.claude/loop.config`: `TYPECHECK_CMD`, `TEST_CMD`). For a
-     single-package change you may scope them to that package to save time, but
-     the driver will run the full gate anyway.
+   - For `logic` / `visual` paths: run a **fast scoped check** for your own
+     feedback — typecheck and tests for the package you touched only (see
+     `.claude/loop.config`: `TYPECHECK_CMD`, `TEST_CMD`). Do NOT run the full
+     suite here. Step 6's `anyleft` is the authoritative full-repo gate, and
+     running it twice per maker is pure wall clock inside the wave.
    - For the `docs` path: skip typecheck/tests. Instead re-read the issue's
      acceptance-criteria checklist and confirm each bullet is satisfied by the
      document you wrote.
@@ -95,15 +96,30 @@ disposable; the repo and the issue carry all durable state.
    Commit even partial progress — the commit is how the next iteration resumes.
 
 6. **Self-check with `anyleft`.** Invoke the **`anyleft`** skill against issue
-   `<n>`. This is your own pre-flight, not the authoritative gate (the driver
-   runs an independent `anyleft` with separate context as Gate 2). Append any
-   gaps it finds to the issue as a comment so the next iteration sees them.
+   `<n>`. This is the full-repo gate — step 4 was only your scoped smoke check.
+   It is still not the authoritative one: for `logic` issues the driver runs an
+   independent `anyleft` with separate context as Gate 2, because those close
+   without a human pass. Append any gaps it finds to the issue as a comment so
+   the next iteration sees them.
    Then go over your own work once as a reviewer would: re-read the full diff
    end to end and ask whether it would pass both the tests and the user's
    manual verification against the issue's acceptance criteria. Fix what
    wouldn't before reporting.
 
-7. **Report a status token** as the final line of your output, so the driver can
+7. **Say how to verify it.** Before the status token, give a short **How to
+   verify** section so the human (and the driver's checker) can confirm the
+   change without reverse-engineering it:
+   - **Automated**: the exact command(s) that exercise this change and what
+     green looks like — the test file/name you added, the self-check script, or
+     the typecheck command (e.g. `npx tsx src/house/openWall.check.ts` → prints
+     `OK — ...`).
+   - **Manual**: the concrete steps to see it working against the acceptance
+     criteria — for `visual`, the route to load and what should now render; for
+     `logic`, the flow to walk or the DSL/API call to run and the expected
+     result; for `docs`, which file to open and which bullets to check. Name
+     real routes, commands, and expected output, not "run the tests".
+
+8. **Report a status token** as the final line of your output, so the driver can
    parse it deterministically:
    - `WORK_ISSUE_DONE: #<n>` — committed, typecheck+test green, anyleft clean.
    - `WORK_ISSUE_PARTIAL: #<n> <one-line reason>` — committed WIP, not yet green.
